@@ -1,13 +1,8 @@
-use actix_web::{web, App, HttpServer, Responder, get, middleware::Logger};
+use actix_web::{ App, HttpServer, middleware::Logger };
 
 mod utils;
 mod routes;
 
-
-#[get("/hello/{name}")]
-async fn greet(name: web::Path<String>) -> impl Responder {
-    format!("Hello, {}!", name)
-}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -29,7 +24,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .wrap(Logger::default())
-            .service(greet)
+            .configure(routes::home_routes::config)
     })
     .bind(format!("{}:{}", address, port))?
     .run()
