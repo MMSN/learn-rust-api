@@ -1,4 +1,5 @@
 use actix_web::{ App, HttpServer, middleware::Logger, web };
+use jsonwebtoken::crypto::rust_crypto::DEFAULT_PROVIDER;
 use migration::{ Migrator, MigratorTrait };
 use sea_orm::{ Database, DatabaseConnection };
 use utils::app_state::AppState;
@@ -20,6 +21,11 @@ async fn main() -> std::io::Result<()> {
 
     env_logger::init();
 
+    DEFAULT_PROVIDER
+        .install_default()
+        .expect("Failed to install jsonwebtoken crypto provider");
+
+
     let address: String = (*utils::constants::ADDRESS).clone();
     let port: u16 = (*utils::constants::PORT).clone();
     let database_url: String = (*utils::constants::DATABASE_URL).clone();
@@ -37,6 +43,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new( AppState { db : db.clone() } ))
             .wrap(Logger::default())
             .configure(routes::home_routes::config)
+            .configure(routes::auth_routes::config)
     })
     .bind(format!("{}:{}", address, port))?
     .run()
