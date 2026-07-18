@@ -7,9 +7,13 @@ use utils::app_state::AppState;
 mod utils;
 mod routes;
 
+#[derive(Debug)]
+struct MainError {
+  message: String
+}
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), MainError> {
 
     if std::env::var_os("RUST_LOG").is_none() {
         unsafe {
@@ -34,9 +38,9 @@ async fn main() -> std::io::Result<()> {
         database_url
     )
     .await
-    .unwrap();
+    .map_err(|err| MainError { message: err.to_string() })?;
 
-    Migrator::up(&db, None).await.unwrap();
+    Migrator::up(&db, None).await.map_err(|err| MainError { message: err.to_string() })?;
 
     HttpServer::new(move || {
         App::new()
@@ -46,7 +50,9 @@ async fn main() -> std::io::Result<()> {
             .configure(routes::auth_routes::config)
             .configure(routes::user_routes::config)
     })
-    .bind(format!("{}:{}", address, port))?
+    .bind(format!("{}:{}", address, port))
+    .map_err(|err| MainError { message: err.to_string() })?
     .run()
     .await
+    .map_err(|err| MainError { message: err.to_string() })
 }
