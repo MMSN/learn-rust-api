@@ -16,6 +16,7 @@ pub async fn check_auth_middleware(
 
   let token = auth.unwrap().to_str().unwrap().replace("Bearer ", "").to_owned();
   let claim = decode_jwt(token).unwrap();
+  req.extensions_mut().insert(claim.claims);
 
   next.call(req).await
     .map_err(|err| Error::from(ApiResponse::new(500, err.to_string())))
