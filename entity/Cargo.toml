@@ -9,6 +9,7 @@ name = "entity"
 path = "src/mod.rs"
 
 [dependencies]
+chrono = { version = "0.4.45", features = ["serde"] }
 serde = { version = "1.0.197", features = [ "derive" ] }
 
 sea-orm = { version = "2.0.0-rc.40" }
