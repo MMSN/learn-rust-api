@@ -49,6 +49,7 @@ async fn main() -> Result<(), MainError> {
             .configure(routes::home_routes::config)
             .configure(routes::auth_routes::config)
             .configure(routes::user_routes::config)
+            .configure(routes::thread_routes::config)
     })
     .bind(format!("{}:{}", address, port))
     .map_err(|err| MainError { message: err.to_string() })?

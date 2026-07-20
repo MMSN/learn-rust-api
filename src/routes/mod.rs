@@ -2,4 +2,5 @@ pub mod home_routes;
 pub mod handlers;
 pub mod auth_routes;
 pub mod user_routes;
+pub mod thread_routes;
 pub mod middlewares;
