@@ -1,7 +1,7 @@
 use actix_web::{get, post, web};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sea_orm::{ActiveModelTrait, EntityTrait, QueryFilter, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 
 use crate::utils::{api_response, app_state, jwt::Claims};
 
@@ -72,4 +72,36 @@ pub async fn get_thread_list(
     200,
     res_string.to_owned()
   ))
-} 
+}
+
+#[get("/{thread_id}")]
+pub async fn get_thread(
+  app_state: web::Data<app_state::AppState>,
+  claim: Claims,
+  thread_id: web::Path<i32>
+) -> Result<api_response::ApiResponse, api_response::ApiResponse> {
+
+  let thread_id = thread_id.into_inner();
+
+  let thread: ThreadModel = entity::thread::Entity::find()
+    .filter(entity::thread::Column::Id.eq(thread_id))
+    .one(&app_state.db).await
+    .map_err(|err| api_response::ApiResponse::new(500, err.to_string()))?
+    .map(|thread| ThreadModel {
+      id: thread.id,
+      user_id: thread.user_id,
+      title: thread.title,
+      body: thread.body,
+      created_at: thread.created_at,
+      updated_at: thread.updated_at,
+    })
+    .ok_or(api_response::ApiResponse::new(404, "Thread not found".to_string()))?;
+
+  let res_string = serde_json::to_string(&thread)
+    .map_err(|err| api_response::ApiResponse::new(500, err.to_string()))?;
+
+  Ok(api_response::ApiResponse::new(
+    200,
+    res_string.to_owned()
+  ))
+}

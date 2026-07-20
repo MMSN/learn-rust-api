@@ -10,5 +10,6 @@ pub fn config(config: &mut web::ServiceConfig) {
       .wrap(from_fn(middlewares::auth_middleware::check_auth_middleware))
       .service(handlers::thread_handler::create_thread)
       .service(handlers::thread_handler::get_thread_list)
+      .service(handlers::thread_handler::get_thread)
     );
 } 
