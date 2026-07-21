@@ -11,5 +11,7 @@ pub fn config(config: &mut web::ServiceConfig) {
       .service(handlers::thread_handler::create_thread)
       .service(handlers::thread_handler::get_thread_list)
       .service(handlers::thread_handler::get_thread)
+      .service(handlers::reply_handler::create_reply)
+      .service(handlers::reply_handler::get_replies)
     );
-} 
+}
