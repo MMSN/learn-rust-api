@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Forum</title>
+</head>
+<body>
+
+<h1>Recent Threads</h1>
+
+<ul>
+{% for thread in threads %}
+    <li>
+        <a href="/thread/{{ thread.id }}">
+            {{ thread.title }}
+        </a>
+        by {{ thread.author }}
+    </li>
+{% endfor %}
+</ul>
+
+</body>
+</html>

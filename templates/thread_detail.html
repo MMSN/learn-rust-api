@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ thread.title }}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container">
+    <article class="card">
+      <h1>{{ thread.title }}</h1>
+      <p>{{ thread.body }}</p>
+      <small>By user {{ thread.user_id }} • {{ thread.created_at }}</small>
+    </article>
+  </main>
+</body>
+</html>

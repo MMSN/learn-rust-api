@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Threads</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Threads</h1>
+    {% if threads.is_empty() %}
+      <p>No threads yet.</p>
+    {% else %}
+      {% for thread in threads %}
+        <article class="card">
+          <h2><a href="/thread/{{ thread.id }}">{{ thread.title }}</a></h2>
+          <p>{{ thread.body }}</p>
+          <small>By user {{ thread.user_id }} • {{ thread.created_at }}</small>
+        </article>
+      {% endfor %}
+    {% endif %}
+  </main>
+</body>
+</html>

@@ -1,3 +1,4 @@
+use actix_files::Files;
 use actix_web::{ App, HttpServer, middleware::Logger, web };
 use jsonwebtoken::crypto::rust_crypto::DEFAULT_PROVIDER;
 use migration::{ Migrator, MigratorTrait };
@@ -44,6 +45,7 @@ async fn main() -> Result<(), MainError> {
 
     HttpServer::new(move || {
         App::new()
+            .service(Files::new("/static", "static"))
             .app_data(web::Data::new( AppState { db : db.clone() } ))
             .wrap(Logger::default())
             .configure(routes::home_routes::config)

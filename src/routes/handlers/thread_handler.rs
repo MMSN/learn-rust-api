@@ -1,5 +1,6 @@
-use actix_web::{get, post, web};
+use actix_web::{get, post, web, HttpResponse};
 use chrono::{DateTime, Utc};
+use askama::Template;
 use serde::{Deserialize, Serialize};
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 
@@ -19,6 +20,16 @@ struct ThreadModel {
   pub body: String,
   pub created_at: DateTime<Utc>,
   pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone)]
+struct ThreadView {
+  id: i32,
+  user_id: i32,
+  title: String,
+  body: String,
+  created_at: String,
+  updated_at: String,
 }
 
 #[post("/create")]
@@ -46,62 +57,77 @@ pub async fn create_thread(
   ))
 }
 
+#[derive(Template)]
+#[template(path = "thread_list.html")]
+struct ThreadListTemplate {
+    //threads: &'a [Thread],
+    threads: Vec<ThreadView>,
+}
 #[get("/thread-list")]
 pub async fn get_thread_list(
   app_state: web::Data<app_state::AppState>,
-  claim: Claims,
-) -> Result<api_response::ApiResponse, api_response::ApiResponse> {
+  _claim: Claims,
+) -> Result<HttpResponse, actix_web::Error> {
 
-  let threads: Vec<ThreadModel> = entity::thread::Entity::find()
+  let threads: Vec<ThreadView> = entity::thread::Entity::find()
     .all(&app_state.db).await
-    .map_err(|err| api_response::ApiResponse::new(500, err.to_string()))?
+    .map_err(|err| actix_web::error::ErrorInternalServerError(err.to_string()))?
     .into_iter()
-    .map(|thread| ThreadModel {
+    .map(|thread| ThreadView {
       id: thread.id,
       user_id: thread.user_id,
       title: thread.title,
       body: thread.body,
-      created_at: thread.created_at,
-      updated_at: thread.updated_at,
+      created_at: thread.created_at.to_rfc3339(),
+      updated_at: thread.updated_at.to_rfc3339(),
     }).collect();
 
-  let res_string = serde_json::to_string(&threads)
-    .map_err(|err| api_response::ApiResponse::new(500, err.to_string()))?;
+  let template = ThreadListTemplate { threads };
+  let html = template.render()
+    .map_err(|err| actix_web::error::ErrorInternalServerError(err.to_string()))?;
 
-  Ok(api_response::ApiResponse::new(
-    200,
-    res_string.to_owned()
-  ))
+  Ok(HttpResponse::Ok()
+    .content_type("text/html; charset=utf-8")
+    .body(html))
 }
 
+#[derive(Template)]
+#[template(path = "thread_detail.html")]
+struct ThreadDetailTemplate {
+  thread: ThreadView,
+}
 #[get("/{thread_id}")]
 pub async fn get_thread(
   app_state: web::Data<app_state::AppState>,
-  claim: Claims,
+  _claim: Claims,
   thread_id: web::Path<i32>
-) -> Result<api_response::ApiResponse, api_response::ApiResponse> {
+) -> Result<HttpResponse, actix_web::Error> {
 
   let thread_id = thread_id.into_inner();
 
-  let thread: ThreadModel = entity::thread::Entity::find()
+  let thread = entity::thread::Entity::find()
     .filter(entity::thread::Column::Id.eq(thread_id))
     .one(&app_state.db).await
-    .map_err(|err| api_response::ApiResponse::new(500, err.to_string()))?
-    .map(|thread| ThreadModel {
-      id: thread.id,
-      user_id: thread.user_id,
-      title: thread.title,
-      body: thread.body,
-      created_at: thread.created_at,
-      updated_at: thread.updated_at,
-    })
-    .ok_or(api_response::ApiResponse::new(404, "Thread not found".to_string()))?;
+    .map_err(|err| actix_web::error::ErrorInternalServerError(err.to_string()))?;
 
-  let res_string = serde_json::to_string(&thread)
-    .map_err(|err| api_response::ApiResponse::new(500, err.to_string()))?;
+  let Some(thread) = thread else {
+    return Ok(HttpResponse::NotFound().body("Thread not found"));
+  };
 
-  Ok(api_response::ApiResponse::new(
-    200,
-    res_string.to_owned()
-  ))
+  let thread_view = ThreadView {
+    id: thread.id,
+    user_id: thread.user_id,
+    title: thread.title,
+    body: thread.body,
+    created_at: thread.created_at.to_rfc3339(),
+    updated_at: thread.updated_at.to_rfc3339(),
+  };
+
+  let template = ThreadDetailTemplate { thread: thread_view };
+  let html = template.render()
+    .map_err(|err| actix_web::error::ErrorInternalServerError(err.to_string()))?;
+
+  Ok(HttpResponse::Ok()
+    .content_type("text/html; charset=utf-8")
+    .body(html))
 }
