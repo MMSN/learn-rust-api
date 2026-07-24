@@ -1,4 +1,5 @@
 use actix_web::{get, post, web, HttpResponse};
+use actix_web::cookie::{Cookie, SameSite};
 use askama::Template;
 use sea_orm::Condition;
 use sea_orm::EntityTrait;
@@ -82,7 +83,7 @@ pub async fn login_page() -> Result<HttpResponse, actix_web::Error> {
 pub async fn login(
     app_state: web::Data<app_state::AppState>,
     login_data: web::Form<LoginModel>
-) -> Result<ApiResponse,ApiResponse> {
+) -> Result<HttpResponse, ApiResponse> {
 
   let user_data = entity::user::Entity::find()
     .filter(
@@ -96,5 +97,12 @@ pub async fn login(
     let token = encode_jwt(user_data.email, user_data.id)
     .map_err(|err| ApiResponse::new(500, err.to_string()))?;
 
-    Ok(api_response::ApiResponse::new(200, format!("{{ 'token':'{}' }}",token)))
+    let mut cookie = Cookie::new("token", token.clone());
+    cookie.set_path("/");
+    cookie.set_http_only(true);
+    cookie.set_same_site(SameSite::Lax);
+
+    Ok(HttpResponse::Ok()
+      .cookie(cookie)
+      .body(format!("{{ 'token':'{}' }}", token)))
 }
