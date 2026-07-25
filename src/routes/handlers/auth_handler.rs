@@ -83,7 +83,7 @@ pub async fn login_page() -> Result<HttpResponse, actix_web::Error> {
 pub async fn login(
     app_state: web::Data<app_state::AppState>,
     login_data: web::Form<LoginModel>
-) -> Result<HttpResponse, ApiResponse> {
+) -> Result<HttpResponse, actix_web::Error> {
 
   let user_data = entity::user::Entity::find()
     .filter(
@@ -91,18 +91,24 @@ pub async fn login(
       .add(entity::user::Column::Email.eq(&login_data.email))
       .add(entity::user::Column::Password.eq(digest(&login_data.password)))
     ).one(&app_state.db).await
-    .map_err(|err| ApiResponse::new(500,err.to_string()))?
-    .ok_or(ApiResponse::new(404, "User Not Found".to_owned()))?;
+    .map_err(|err| actix_web::error::ErrorInternalServerError(err.to_string()))?;
 
-    let token = encode_jwt(user_data.email, user_data.id)
-    .map_err(|err| ApiResponse::new(500, err.to_string()))?;
+  let Some(user_data) = user_data else {
+    return Ok(HttpResponse::SeeOther()
+      .append_header(("Location", "/"))
+      .finish());
+  };
 
-    let mut cookie = Cookie::new("token", token.clone());
-    cookie.set_path("/");
-    cookie.set_http_only(true);
-    cookie.set_same_site(SameSite::Lax);
+  let token = encode_jwt(user_data.email, user_data.id)
+    .map_err(|err| actix_web::error::ErrorInternalServerError(err.to_string()))?;
 
-    Ok(HttpResponse::Ok()
-      .cookie(cookie)
-      .body(format!("{{ 'token':'{}' }}", token)))
+  let mut cookie = Cookie::new("token", token.clone());
+  cookie.set_path("/");
+  cookie.set_http_only(true);
+  cookie.set_same_site(SameSite::Lax);
+
+  Ok(HttpResponse::SeeOther()
+    .append_header(("Location", "/thread/thread-list"))
+    .cookie(cookie)
+    .finish())
 }
