@@ -13,6 +13,15 @@
       <p>{{ thread.body }}</p>
       <small>By user {{ thread.user_id }} • {{ thread.created_at }}</small>
     </article>
+
+    <section class="card">
+      <h2>Post a reply</h2>
+      <form action="/thread/{{ thread.id }}/reply" method="post">
+        <textarea name="content" rows="4" cols="60" placeholder="Write your reply..." required></textarea>
+        <br />
+        <button type="submit">Submit reply</button>
+      </form>
+    </section>
   </main>
 </body>
 </html>

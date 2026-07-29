@@ -1,4 +1,4 @@
-use actix_web::{get, post, web};
+use actix_web::{get, post, web, HttpResponse};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
@@ -26,17 +26,17 @@ pub async fn create_reply(
   app_state: web::Data<app_state::AppState>,
   claim: Claims,
   path: web::Path<i32>,
-  reply_model: web::Json<CreateReplyModel>,
-) -> Result<api_response::ApiResponse, api_response::ApiResponse> {
+  reply_model: web::Form<CreateReplyModel>,
+) -> Result<HttpResponse, actix_web::Error> {
   let thread_id = path.into_inner();
 
   let thread_exists = entity::thread::Entity::find_by_id(thread_id)
     .one(&app_state.db)
     .await
-    .map_err(|err| api_response::ApiResponse::new(500, err.to_string()))?;
+    .map_err(|err| actix_web::error::ErrorInternalServerError(err.to_string()))?;
 
   if thread_exists.is_none() {
-    return Err(api_response::ApiResponse::new(404, "Thread not found".to_string()));
+    return Ok(HttpResponse::NotFound().body("Thread not found"));
   }
 
   let reply_entity = entity::reply::ActiveModel {
@@ -50,12 +50,11 @@ pub async fn create_reply(
   };
 
   reply_entity.insert(&app_state.db).await
-    .map_err(|err| api_response::ApiResponse::new(500, err.to_string()))?;
+    .map_err(|err| actix_web::error::ErrorInternalServerError(err.to_string()))?;
 
-  Ok(api_response::ApiResponse::new(
-    200,
-    format!("Reply created for thread {} by user {}", thread_id, claim.id)
-  ))
+  Ok(HttpResponse::SeeOther()
+    .append_header(("Location", format!("/thread/{}", thread_id)))
+    .finish())
 }
 
 #[get("/{thread_id}/replies")]
