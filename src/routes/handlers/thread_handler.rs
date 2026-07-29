@@ -32,6 +32,14 @@ struct ThreadView {
   updated_at: String,
 }
 
+#[derive(Clone)]
+struct ReplyView {
+  id: i32,
+  user_id: i32,
+  body: String,
+  created_at: String,
+}
+
 #[post("/create")]
 pub async fn create_thread(
   app_state: web::Data<app_state::AppState>,
@@ -95,6 +103,7 @@ pub async fn get_thread_list(
 #[template(path = "thread_detail.html")]
 struct ThreadDetailTemplate {
   thread: ThreadView,
+  replies: Vec<ReplyView>,
 }
 #[get("/{thread_id}")]
 pub async fn get_thread(
@@ -123,7 +132,20 @@ pub async fn get_thread(
     updated_at: thread.updated_at.to_rfc3339(),
   };
 
-  let template = ThreadDetailTemplate { thread: thread_view };
+  let replies: Vec<ReplyView> = entity::reply::Entity::find()
+    .filter(entity::reply::Column::ThreadId.eq(thread_id))
+    .all(&app_state.db).await
+    .map_err(|err| actix_web::error::ErrorInternalServerError(err.to_string()))?
+    .into_iter()
+    .map(|reply| ReplyView {
+      id: reply.id,
+      user_id: reply.user_id,
+      body: reply.body,
+      created_at: reply.created_at.to_rfc3339(),
+    })
+    .collect();
+
+  let template = ThreadDetailTemplate { thread: thread_view, replies };
   let html = template.render()
     .map_err(|err| actix_web::error::ErrorInternalServerError(err.to_string()))?;
 

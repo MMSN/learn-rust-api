@@ -14,6 +14,18 @@
       <small>By user {{ thread.user_id }} • {{ thread.created_at }}</small>
     </article>
 
+    {% if !replies.is_empty() %}
+    <section class="card">
+      <h2>Replies</h2>
+      {% for reply in replies %}
+      <article class="card">
+        <p>{{ reply.body }}</p>
+        <small>By user {{ reply.user_id }} • {{ reply.created_at }}</small>
+      </article>
+      {% endfor %}
+    </section>
+    {% endif %}
+
     <section class="card">
       <h2>Post a reply</h2>
       <form action="/thread/{{ thread.id }}/reply" method="post">
