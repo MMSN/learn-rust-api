@@ -1,13 +1,13 @@
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{get, web, HttpResponse};
 use chrono::{DateTime, Utc};
 use askama::Template;
 use serde::{Deserialize, Serialize};
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 
-use crate::utils::{api_response, app_state, jwt::Claims};
+use crate::utils::{app_state, jwt::Claims};
 
 #[derive(Serialize, Deserialize)]
-struct CreateThreadModel {
+pub(crate) struct CreateThreadModel {
   title: String,
   content: String,
 }
@@ -40,13 +40,11 @@ struct ReplyView {
   created_at: String,
 }
 
-#[post("/create")]
 pub async fn create_thread(
   app_state: web::Data<app_state::AppState>,
   claim: Claims,
-  thread_model: web::Json<CreateThreadModel>
-) -> Result<api_response::ApiResponse, api_response::ApiResponse> {
-
+  thread_model: web::Form<CreateThreadModel>
+) -> Result<HttpResponse, actix_web::Error> {
   let thread_entity = entity::thread::ActiveModel { 
     user_id: Set(claim.id), 
     title: Set(thread_model.title.clone()), 
@@ -57,12 +55,24 @@ pub async fn create_thread(
   };
 
   thread_entity.insert(&app_state.db).await
-    .map_err(|err| api_response::ApiResponse::new(500, err.to_string()))?;
+    .map_err(|err| actix_web::error::ErrorInternalServerError(err.to_string()))?;
 
-  Ok(api_response::ApiResponse::new(
-    200,
-    format!("Thread created by user {} with title: {}", claim.id, thread_model.title)
-  ))
+  Ok(HttpResponse::SeeOther()
+    .append_header(("Location", "/thread/thread-list"))
+    .finish())
+}
+
+#[derive(Template)]
+#[template(path = "new_thread.html")]
+struct NewThreadTemplate {}
+pub async fn create_thread_form() -> Result<HttpResponse, actix_web::Error> {
+  let template = NewThreadTemplate {};
+  let html = template.render()
+    .map_err(|err| actix_web::error::ErrorInternalServerError(err.to_string()))?;
+
+  Ok(HttpResponse::Ok()
+    .content_type("text/html; charset=utf-8")
+    .body(html))
 }
 
 #[derive(Template)]
@@ -71,6 +81,7 @@ struct ThreadListTemplate {
     //threads: &'a [Thread],
     threads: Vec<ThreadView>,
 }
+
 #[get("/thread-list")]
 pub async fn get_thread_list(
   app_state: web::Data<app_state::AppState>,

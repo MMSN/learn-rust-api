@@ -8,7 +8,9 @@ use super::handlers;
 pub fn config(config: &mut web::ServiceConfig) {
     config.service(web::scope("/thread")
       .wrap(from_fn(middlewares::auth_middleware::check_auth_middleware))
-      .service(handlers::thread_handler::create_thread)
+      .service(web::resource("/create")
+        .route(web::get().to(handlers::thread_handler::create_thread_form))
+        .route(web::post().to(handlers::thread_handler::create_thread)))
       .service(handlers::thread_handler::get_thread_list)
       .service(handlers::thread_handler::get_thread)
       .service(handlers::reply_handler::create_reply)
